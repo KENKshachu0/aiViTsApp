@@ -1,7 +1,8 @@
 <template>
   <view class="container">
-    <text class="title">欢迎使用语音助手</text>
+    <text class="title">语音助手</text>
     <button @click="goToASR">启动语音识别</button>
+    <button @click="goToChat">进入语音聊天</button>
   </view>
 </template>
 
@@ -12,25 +13,12 @@ export default {
       uni.navigateTo({
         url: '/pages/asr/index'
       })
+    },
+    goToChat() {
+      uni.navigateTo({
+        url: '/pages/chat/index'
+      })
     }
   }
 }
 </script>
-
-<style>
-.container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 100rpx;
-}
-.title {
-  font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 50rpx;
-}
-button {
-  font-size: 18px;
-  padding: 20rpx 40rpx;
-}
-</style>

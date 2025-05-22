@@ -3,7 +3,7 @@
 		{
 			"path": "pages/index/index",
 			"style": {
-				"navigationBarTitleText": "uni-app首页"
+				"navigationBarTitleText": "首页"
 			}
 		},
 		{
@@ -11,7 +11,11 @@
 			"style": {
 				"navigationBarTitleText": "语音识别"
 				}
-		}
+		},
+			"path": "pages/chat/index",
+			"style": {
+				"navigationBarTitleText": "ai语音对话"
+			}
 	],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",

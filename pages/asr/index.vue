@@ -1,76 +1,146 @@
 <template>
   <view class="container">
-    <button @click="startASR">🎤 开始语音识别</button>
-    <button @click="stopASR">⏹️ 停止</button>
+    <button @click="startRecognize">开始本地语音识别</button>
     <view class="result">识别结果：{{ result }}</view>
   </view>
 </template>
 
 <script>
-import NLSClient from '@/utils/nls.js'
-
 export default {
   data() {
     return {
-      result: '',
-      nls: null,
-      recorder: null
+      result: ''
+    }
+  },<template>
+  <view class="chat-container">
+    <scroll-view scroll-y class="messages">
+      <view v-for="(msg, index) in messages" :key="index" class="message">
+        <text>{{ msg }}</text>
+      </view>
+    </scroll-view>
+    <view class="input-area">
+      <input v-model="inputText" placeholder="输入内容..." class="text-input"/>
+      <button @click="sendText">发送</button>
+      <button @click="startVoiceInput">🎤</button>
+    </view>
+  </view>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      inputText: '',
+      messages: []
     }
   },
   methods: {
-    startASR() {
-      this.nls = new NLSClient({
-        appkey: '2BBIDJhM2wHRBQIl', //static！！！
-        token: 'b76f0ff2634b458a9d1580fa4fd5bef0',
-        onMessage: (msg) => {
-          if (msg.result && msg.result.text) {
-            this.result += msg.result.text
-          }
-        },
-        onOpen: () => {
-          console.log('WebSocket已连接')
-          this.startRecorder()
+    sendText() {
+      if (this.inputText.trim()) {
+        this.messages.push(this.inputText)
+        this.inputText = ''
+      }
+    },
+    startVoiceInput() {
+      const main = plus.android.runtimeMainActivity()
+      const SpeechRecognizer = plus.android.importClass('android.speech.SpeechRecognizer')
+      const RecognizerIntent = plus.android.importClass('android.content.Intent')
+      const RecognitionListener = plus.android.implements('android.speech.RecognitionListener', {
+        onResults: (bundle) => {
+          const ArrayList = plus.android.importClass('java.util.ArrayList')
+          const results = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+          const text = results.get(0)
+          this.messages.push(text)
         },
         onError: (err) => {
-          console.error('WebSocket出错', err)
+          console.error('语音识别出错:', err)
+          this.messages.push('[语音识别失败]')
         },
-        onClose: () => {
-          console.log('连接已关闭')
-        }
+        onReadyForSpeech: () => console.log('准备开始识别'),
+        onBeginningOfSpeech: () => console.log('开始说话'),
+        onEndOfSpeech: () => console.log('说话结束')
       })
-      this.result = ''
-      this.nls.connect()
-    },
-    stopASR() {
-      this.stopRecorder()
-      this.nls && this.nls.stop()
-    },
-    startRecorder() {
-      const recorder = uni.getRecorderManager()
-      this.recorder = recorder
-      recorder.onFrameRecorded((res) => {
-        // 每次录音帧（默认为 20ms）发送给阿里云识别服务
-        this.nls.send(res.frameBuffer)
+
+      const recognizer = SpeechRecognizer.createSpeechRecognizer(main)
+      recognizer.setRecognitionListener(RecognitionListener)
+
+      const intent = new RecognizerIntent('android.speech.action.RECOGNIZE_SPEECH')
+      intent.putExtra('android.speech.extra.LANGUAGE_MODEL', 'free_form')
+      intent.putExtra('android.speech.extra.LANGUAGE', 'zh-CN')
+
+      recognizer.startListening(intent)
+    }
+  }
+}
+</script>
+
+<style>
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+.messages {
+  flex: 1;
+  padding: 20rpx;
+  background-color: #f8f8f8;
+}
+.message {
+  margin-bottom: 10rpx;
+  padding: 10rpx;
+  background: #fff;
+  border-radius: 10rpx;
+}
+.input-area {
+  display: flex;
+  padding: 10rpx;
+  background: #eee;
+}
+.text-input {
+  flex: 1;
+  border: 1px solid #ccc;
+  border-radius: 6rpx;
+  padding: 10rpx;
+  margin-right: 10rpx;
+}
+button {
+  padding: 10rpx 20rpx;
+}
+</style>
+  methods: {
+    startRecognize() {
+      const main = plus.android.runtimeMainActivity()
+      const SpeechRecognizer = plus.android.importClass('android.speech.SpeechRecognizer')
+      const RecognizerIntent = plus.android.importClass('android.content.Intent')
+      const RecognitionListener = plus.android.implements('android.speech.RecognitionListener', {
+        onResults: (bundle) => {
+          const ArrayList = plus.android.importClass('java.util.ArrayList')
+          const results = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+          this.result = results.get(0)
+          console.log('识别结果：', this.result)
+        },
+        onError: (err) => {
+          console.error('识别出错:', err)
+          this.result = '识别出错：' + err
+        },
+        onReadyForSpeech: () => console.log('准备开始识别'),
+        onBeginningOfSpeech: () => console.log('开始说话'),
+        onEndOfSpeech: () => console.log('说话结束'),
+        onPartialResults: () => {},
+        onBufferReceived: () => {},
+        onEvent: () => {},
+        onRmsChanged: () => {},
+        onResults: () => {}
       })
-      recorder.onStart(() => {
-        console.log('录音开始')
-      })
-      recorder.onError((err) => {
-        console.error('录音错误', err)
-      })
-      recorder.start({
-        format: 'pcm',
-        sampleRate: 16000,
-        numberOfChannels: 1,
-        encodeBitRate: 256000,
-        frameSize: 1 // 单位 KB，表示每帧大小
-      })
-    },
-    stopRecorder() {
-      if (this.recorder) {
-        this.recorder.stop()
-        this.recorder = null
-      }
+
+      const recognizer = SpeechRecognizer.createSpeechRecognizer(main)
+      recognizer.setRecognitionListener(RecognitionListener)
+
+      const intent = new RecognizerIntent('android.speech.action.RECOGNIZE_SPEECH')
+      intent.putExtra('android.speech.extra.LANGUAGE_MODEL', 'free_form')
+      intent.putExtra('android.speech.extra.LANGUAGE', 'zh-CN')
+
+      recognizer.startListening(intent)
     }
   }
 }
